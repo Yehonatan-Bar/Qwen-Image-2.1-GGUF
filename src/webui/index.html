@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qwen Image - סטודיו מקומי</title>
+<style>
+  :root {
+    --bg: #111317;
+    --panel: #1a1d23;
+    --panel-2: #22262e;
+    --border: #2e333d;
+    --text: #e8eaed;
+    --muted: #9aa0aa;
+    --accent: #6ea8ff;
+    --accent-strong: #4a8df5;
+    --danger: #ef6b6b;
+    --ok: #5fcf8a;
+    --warn: #e8b64c;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", Arial, sans-serif; font-size: 15px; line-height: 1.5;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--panel);
+  }
+  header h1 { font-size: 19px; margin: 0; font-weight: 600; }
+  header h1 small { color: var(--muted); font-weight: 400; font-size: 13px; margin-inline-start: 8px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px;
+    background: var(--panel-2); border: 1px solid var(--border); font-size: 13px; color: var(--muted);
+  }
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+  .status-pill.running .status-dot { background: var(--warn); animation: pulse 1.2s infinite; }
+  .status-pill.idle .status-dot { background: var(--ok); }
+  .status-pill.offline .status-dot { background: var(--danger); }
+  .status-pill.gpu-low { color: var(--warn); border-color: var(--warn); }
+  /* Background service: amber while it uses the machine, green when off */
+  .status-pill.service-on .status-dot { background: var(--warn); }
+  .status-pill.service-off .status-dot { background: var(--ok); }
+  .status-pill.service-busy .status-dot { background: var(--accent); animation: pulse 1.2s infinite; }
+  .status-pill.service-error { color: var(--danger); border-color: var(--danger); }
+  [hidden] { display: none !important; }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  main { display: grid; grid-template-columns: 420px 1fr; gap: 20px; padding: 20px 24px; max-width: 1600px; margin: 0 auto; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--panel-2); padding: 4px; border-radius: 8px; margin-bottom: 16px; }
+  .tab {
+    border: 0; background: transparent; color: var(--muted); padding: 9px; border-radius: 6px;
+    font: inherit; cursor: pointer;
+  }
+  .tab.active { background: var(--accent-strong); color: #fff; }
+  .tab:disabled { opacity: .4; cursor: not-allowed; }
+
+  label.field-label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  textarea, input[type=number], input[type=text], select {
+    width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 11px; font: inherit;
+  }
+  textarea { resize: vertical; min-height: 110px; }
+  textarea:focus, input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .range-row { display: flex; align-items: center; gap: 10px; }
+  .range-row input[type=range] { flex: 1; accent-color: var(--accent); }
+  .range-value { min-width: 38px; text-align: center; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; font-size: 13px; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; cursor: pointer; }
+  .checkbox-row input { accent-color: var(--accent); width: 16px; height: 16px; }
+  details { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 13.5px; }
+
+  .seed-row { display: flex; gap: 8px; }
+  .seed-row input { flex: 1; }
+
+  button.primary, button.secondary, button.danger, button.ghost {
+    font: inherit; border-radius: 8px; padding: 10px 14px; cursor: pointer; border: 1px solid transparent;
+  }
+  button.primary { background: var(--accent-strong); color: #fff; width: 100%; font-weight: 600; font-size: 16px; padding: 12px; margin-top: 18px; }
+  button.primary:hover { background: var(--accent); }
+  button.primary:disabled { opacity: .45; cursor: not-allowed; }
+  button.secondary { background: var(--panel-2); color: var(--text); border-color: var(--border); }
+  button.secondary:hover { border-color: var(--accent); }
+  button.danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+  button.danger:hover { background: rgba(239,107,107,.1); }
+  button.ghost { background: transparent; color: var(--muted); border-color: var(--border); padding: 6px 10px; font-size: 13px; }
+  button.ghost:hover { color: var(--text); border-color: var(--accent); }
+
+  .estimate { margin-top: 10px; font-size: 13px; color: var(--muted); text-align: center; }
+  .info-box { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: rgba(110,168,255,.10); border: 1px solid rgba(110,168,255,.35); color: #c9dcff; font-size: 13.5px; display: none; }
+  .error-box { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: rgba(239,107,107,.12); border: 1px solid rgba(239,107,107,.4); color: #ffb3b3; font-size: 13.5px; display: none; white-space: pre-wrap; }
+
+  /* Reference images (edit mode) */
+  .dropzone {
+    border: 2px dashed var(--border); border-radius: var(--radius); padding: 18px; text-align: center;
+    color: var(--muted); cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .dropzone.drag-over, .dropzone:hover { border-color: var(--accent); background: rgba(110,168,255,.06); }
+  .reference-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+  .reference-item { position: relative; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); aspect-ratio: 1; }
+  .reference-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .reference-item .badge { position: absolute; top: 4px; inset-inline-start: 4px; background: rgba(0,0,0,.7); color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+  .reference-item .remove { position: absolute; top: 4px; inset-inline-end: 4px; background: rgba(0,0,0,.7); color: #fff; border: 0; border-radius: 4px; cursor: pointer; font-size: 12px; padding: 1px 6px; }
+
+  /* Output area */
+  .stage { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .progress-card { display: none; }
+  .progress-card.visible { display: block; }
+  .progress-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .progress-phase { font-weight: 600; font-size: 16px; }
+  .progress-details { color: var(--muted); font-size: 13.5px; }
+  .progress-bar { height: 10px; background: var(--panel-2); border-radius: 999px; overflow: hidden; margin: 12px 0 10px; }
+  .progress-fill { height: 100%; width: 0%; background: var(--accent-strong); transition: width .4s; }
+  .progress-bar.indeterminate .progress-fill { width: 30%; animation: slide 1.4s infinite ease-in-out; }
+  @keyframes slide { 0% { margin-inline-start: -30%; } 100% { margin-inline-start: 100%; } }
+  .progress-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+  .result-area { min-height: 320px; display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; justify-content: center; }
+  .result-empty { color: var(--muted); text-align: center; margin: auto; padding: 60px 20px; }
+  .result-item { display: flex; flex-direction: column; gap: 8px; max-width: 100%; }
+  .result-item img { max-width: 100%; max-height: 70vh; border-radius: 8px; cursor: zoom-in; }
+  .checker { background-color: #fff; background-image: linear-gradient(45deg,#ccc 25%,transparent 25%),linear-gradient(-45deg,#ccc 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ccc 75%),linear-gradient(-45deg,transparent 75%,#ccc 75%); background-size: 20px 20px; background-position: 0 0,0 10px,10px -10px,-10px 0; }
+  .item-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+
+  .gallery-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .gallery-header h2 { font-size: 16px; margin: 0; }
+  .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .gallery-grid .thumb { aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; background: var(--panel-2); }
+  .gallery-grid .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s; }
+  .gallery-grid .thumb:hover img { transform: scale(1.04); }
+  .gallery-empty { color: var(--muted); font-size: 13.5px; }
+  .gallery-header { flex-wrap: wrap; }
+  .gallery-count { color: var(--muted); font-weight: 400; font-size: 13px; }
+  .gallery-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .selection-count { color: var(--muted); font-size: 13px; margin-inline-end: 4px; }
+  button.ghost.danger-text { color: var(--danger); border-color: rgba(239,107,107,.45); }
+  button.ghost.danger-text:hover { background: rgba(239,107,107,.1); border-color: var(--danger); }
+  button.ghost:disabled { opacity: .4; cursor: not-allowed; }
+  /* Per-image delete button and selection marks */
+  .gallery-grid .thumb { position: relative; }
+  .thumb-delete {
+    position: absolute; top: 6px; inset-inline-end: 6px; z-index: 2;
+    background: rgba(0,0,0,.72); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px;
+    font: inherit; font-size: 12px; padding: 2px 8px; cursor: pointer; opacity: .75; transition: opacity .15s, background .15s;
+  }
+  .thumb:hover .thumb-delete, .thumb:focus-within .thumb-delete { opacity: 1; }
+  .thumb-delete:hover { background: var(--danger); border-color: var(--danger); }
+  .gallery-grid.selecting .thumb-delete { display: none; }
+  .select-mark {
+    position: absolute; top: 6px; inset-inline-start: 6px; z-index: 2; width: 22px; height: 22px;
+    border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,.45); display: none;
+  }
+  .gallery-grid.selecting .select-mark { display: block; }
+  .gallery-grid .thumb.selected { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .thumb.selected .select-mark { background: var(--accent-strong); border-color: var(--accent); }
+  .thumb.selected .select-mark::after {
+    content: ""; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px;
+    border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+  }
+
+  /* Lightbox */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.82); display: none; z-index: 20; padding: 24px; }
+  .modal.open { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+  @media (max-width: 1000px) { .modal.open { grid-template-columns: 1fr; overflow: auto; } }
+  .modal-image-wrap { display: flex; align-items: center; justify-content: center; min-height: 0; }
+  .modal-image-wrap img { max-width: 100%; max-height: calc(100vh - 48px); border-radius: 8px; }
+  .modal-side { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; overflow: auto; }
+  .meta-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 12px 0; }
+  .meta-table td { padding: 5px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .meta-table td:first-child { color: var(--muted); width: 90px; }
+  .meta-prompt { background: var(--panel-2); border-radius: 8px; padding: 10px; font-size: 13.5px; white-space: pre-wrap; word-break: break-word; }
+  .modal-actions { display: grid; gap: 8px; margin-top: 14px; }
+  .modal-close { position: absolute; top: 14px; inset-inline-start: 18px; }
+
+  footer { display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: 6px 24px 24px; max-width: 1600px; margin: 0 auto; color: var(--muted); font-size: 13px; }
+  footer .footer-buttons { display: flex; gap: 8px; }
+  .offline-overlay { position: fixed; inset: 0; background: rgba(17,19,23,.94); display: none; align-items: center; justify-content: center; text-align: center; z-index: 30; font-size: 17px; }
+  .offline-overlay.visible { display: flex; }
+  .ltr { direction: ltr; unicode-bidi: embed; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Qwen Image 2.1 <small id="modelName">סטודיו מקומי</small></h1>
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+    <span class="status-pill" id="gpuPill" title="זיכרון פנוי בכרטיס המסך. אם הוא נמוך, תוכנה אחרת משתמשת בכרטיס והיצירה עלולה להיכשל."><span id="gpuText">כרטיס מסך: בודק...</span></span>
+    <span class="status-pill" id="servicePill" hidden><span class="status-dot"></span><span id="serviceText"></span></span>
+    <button class="ghost" id="serviceButton" type="button" hidden></button>
+    <span class="status-pill idle" id="statusPill"><span class="status-dot"></span><span id="statusText">המודל כבוי - לא צורך זיכרון</span></span>
+  </div>
+</header>
+
+<main>
+  <!-- Controls -->
+  <section class="panel" id="controls">
+    <div class="tabs">
+      <button class="tab active" data-mode="txt2img" id="tabTxt2img">יצירה מטקסט</button>
+      <button class="tab" data-mode="edit" id="tabEdit">עריכת תמונה</button>
+    </div>
+
+    <div id="editSection" style="display:none">
+      <label class="field-label">תמונות לעריכה (עד 4)</label>
+      <div class="dropzone" id="dropzone">
+        גררו לכאן תמונה, הדביקו (Ctrl+V) או לחצו לבחירה
+        <input type="file" id="fileInput" accept="image/*" multiple hidden>
+      </div>
+      <div class="reference-list" id="referenceList"></div>
+      <div class="hint">התמונה הראשונה קובעת את גודל התוצאה. עם כמה תמונות אפשר לכתוב למשל:<br><bdi dir="ltr">"Put the person from the first image into the second image"</bdi></div>
+    </div>
+
+    <label class="field-label" for="prompt" id="promptLabel">מה ליצור?</label>
+    <textarea id="prompt" dir="auto" placeholder="A cozy bookstore at golden hour, a wooden sign above the door reads 'Open'"></textarea>
+    <div class="hint" id="promptHint">מומלץ לכתוב באנגלית. טקסט שצריך להופיע בתמונה - כתבו בתוך גרשיים. Ctrl+Enter מתחיל ליצור.</div>
+
+    <label class="field-label" for="sizePreset">גודל</label>
+    <select id="sizePreset"></select>
+    <div class="row" id="customSizeRow" style="display:none; margin-top:8px">
+      <input type="number" id="customWidth" min="256" max="2048" step="32" value="1024" title="רוחב">
+      <input type="number" id="customHeight" min="256" max="2048" step="32" value="1024" title="גובה">
+    </div>
+
+    <label class="field-label">כמות תמונות</label>
+    <div class="range-row"><input type="range" id="count" min="1" max="8" value="1"><span class="range-value" id="countValue">1</span></div>
+
+    <label class="checkbox-row"><input type="checkbox" id="transparent"> רקע שקוף (PNG עם שקיפות)</label>
+
+    <details>
+      <summary>הגדרות מתקדמות</summary>
+      <label class="field-label">צעדים (יותר = יותר פרטים, יותר זמן)</label>
+      <div class="range-row"><input type="range" id="steps" min="8" max="50" value="20"><span class="range-value" id="stepsValue">20</span></div>
+
+      <label class="field-label">היצמדות לתיאור (CFG)</label>
+      <div class="range-row"><input type="range" id="cfgScale" min="1" max="10" step="0.5" value="6"><span class="range-value" id="cfgValue">6</span></div>
+
+      <label class="field-label" for="seed">Seed (‎-1 = אקראי, מספר קבוע משחזר תמונה)</label>
+      <div class="seed-row">
+        <input type="number" id="seed" value="-1" class="ltr">
+        <button class="ghost" id="randomSeedButton" type="button">אקראי</button>
+      </div>
+
+      <label class="field-label" for="negativePrompt">מה לא לכלול (אופציונלי)</label>
+      <textarea id="negativePrompt" dir="auto" style="min-height:60px" placeholder="blurry, low quality, watermark"></textarea>
+    </details>
+
+    <button class="primary" id="generateButton">צור תמונה</button>
+    <div class="estimate" id="estimate"></div>
+    <div class="error-box" id="errorBox"></div>
+    <div class="info-box" id="infoBox"></div>
+  </section>
+
+  <!-- Output -->
+  <section class="stage">
+    <div class="panel progress-card" id="progressCard">
+      <div class="progress-top">
+        <span class="progress-phase" id="progressPhase">מתחיל...</span>
+        <span class="progress-details" id="progressDetails"></span>
+      </div>
+      <div class="progress-bar indeterminate" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-actions">
+        <span class="progress-details" id="progressTiming"></span>
+        <button class="danger" id="cancelButton">בטל</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="result-area" id="resultArea">
+        <div class="result-empty">התמונות שתיצרו יופיעו כאן.<br>המודל נטען רק בזמן יצירה ונכבה מיד בסיום.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="gallery-header">
+        <h2>גלריה <span class="gallery-count" id="galleryCount"></span></h2>
+        <div class="gallery-actions" id="galleryNormalActions">
+          <button class="ghost" id="selectModeButton">בחירה ומחיקה</button>
+          <button class="ghost danger-text" id="deleteAllButton">מחק הכל</button>
+          <button class="ghost" id="refreshGalleryButton">רענן</button>
+        </div>
+        <div class="gallery-actions" id="gallerySelectActions" style="display:none">
+          <span class="selection-count" id="selectionCount">לחצו על תמונות כדי לבחור</span>
+          <button class="ghost" id="selectAllButton">בחר הכל</button>
+          <button class="ghost danger-text" id="deleteSelectedButton" disabled>מחק נבחרות</button>
+          <button class="ghost" id="cancelSelectButton">סיום</button>
+        </div>
+      </div>
+      <div class="gallery-grid" id="galleryGrid"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span id="footerInfo"></span>
+  <div class="footer-buttons">
+    <button class="secondary" id="openFolderButton">פתח את תיקיית התמונות</button>
+    <button class="danger" id="shutdownButton">כבה את הממשק</button>
+  </div>
+</footer>
+
+<!-- Lightbox -->
+<div class="modal" id="modal">
+  <button class="ghost modal-close" id="modalCloseButton">סגור (Esc)</button>
+  <div class="modal-image-wrap"><img id="modalImage" alt=""></div>
+  <aside class="modal-side">
+    <h3 style="margin:0 0 4px; font-size:16px" id="modalTitle"></h3>
+    <div id="modalMeta"></div>
+    <div class="modal-actions">
+      <a class="secondary" id="modalDownload" download style="text-align:center; text-decoration:none; color:var(--text); background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:10px">הורדה</a>
+      <button class="secondary" id="modalEditButton">ערוך את התמונה הזו</button>
+      <button class="secondary" id="modalReuseButton">טען את ההגדרות שלה</button>
+      <button class="danger" id="modalDeleteButton">מחק לצמיתות (Delete)</button>
+    </div>
+  </aside>
+</div>
+
+<div class="offline-overlay" id="offlineOverlay"><div id="offlineText">הממשק כובה. אפשר לסגור את הלשונית.</div></div>
+
+<script>
+"use strict";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+// Wrap Latin/number fragments (e.g. "1024 x 1024", "3:4") in a left-to-right isolate
+// so the browser's bidi algorithm does not scramble them inside Hebrew text
+const ltrIsolate = (text) => "⁦" + text + "⁩";
+const sizeText = (width, height) => ltrIsolate(width + " x " + height);
+
+const TXT2IMG_SIZE_PRESETS = [
+  { label: "ריבוע - " + sizeText(1024, 1024), width: 1024, height: 1024 },
+  { label: "לאורך " + ltrIsolate("3:4") + " - " + sizeText(864, 1152), width: 864, height: 1152 },
+  { label: "לרוחב " + ltrIsolate("4:3") + " - " + sizeText(1152, 864), width: 1152, height: 864 },
+  { label: "לאורך " + ltrIsolate("9:16") + " - " + sizeText(768, 1344), width: 768, height: 1344 },
+  { label: "לרוחב " + ltrIsolate("16:9") + " - " + sizeText(1344, 768), width: 1344, height: 768 },
+  { label: "טיוטה מהירה - " + sizeText(512, 512), width: 512, height: 512 },
+  { label: "מותאם אישית", custom: true },
+];
+const EDIT_AUTO_PRESET = { label: "לפי התמונה הראשונה (כ-1 מגה-פיקסל)", auto: true };
+const EDIT_FAST_AUTO_PRESET = { label: "לפי התמונה הראשונה - מהיר (כ-0.4 מגה-פיקסל)", auto: true, targetArea: 640 * 640 };
+const MAX_REFERENCE_IMAGES = 4;
+const MAX_UPLOAD_SIDE = 2048;          // larger uploads are downscaled in the browser
+const AUTO_SIZE_TARGET_AREA = 1024 * 1024;
+const PHASE_LABELS = {
+  starting: "מפעיל את המנוע...",
+  loading: "טוען את המודל לזיכרון...",
+  sampling: "מצייר...",
+  decoding: "משלים את התמונה...",
+  waiting_gpu: "כרטיס המסך תפוס על ידי תוכנה אחרת - מנסה שוב בעוד כמה שניות...",
+};
+const LOW_GPU_MEMORY_MB = 2048;
+const GPU_REFRESH_MS = 30000;
+const SERVICE_REFRESH_MS = 30000;
+const SERVICE_BUSY_REFRESH_MS = 2000;   // while it is being switched on or off
+const SERVICE_STATE_TEXTS = {
+  on: "פועל - צורך מעבד וכרטיס מסך",
+  partial: "פועל חלקית",
+  off: "כבוי",
+  starting: "נדלק...",
+  stopping: "נכבה...",
+};
+
+// ---------------------------------------------------------------------------
+// State and element references
+// ---------------------------------------------------------------------------
+let currentMode = "txt2img";
+let referenceImages = [];     // [{ dataUrl, width, height }]
+let editAvailable = true;
+let pollTimer = null;
+let serverOnline = true;
+let modalItem = null;
+let serviceTimer = null;
+let serviceWasBusy = false;
+let serviceLabel = "";
+
+const byId = (elementId) => document.getElementById(elementId);
+const elements = {
+  statusPill: byId("statusPill"), statusText: byId("statusText"), modelName: byId("modelName"),
+  gpuPill: byId("gpuPill"), gpuText: byId("gpuText"),
+  servicePill: byId("servicePill"), serviceText: byId("serviceText"),
+  serviceButton: byId("serviceButton"),
+  tabTxt2img: byId("tabTxt2img"), tabEdit: byId("tabEdit"), editSection: byId("editSection"),
+  dropzone: byId("dropzone"), fileInput: byId("fileInput"), referenceList: byId("referenceList"),
+  prompt: byId("prompt"), promptLabel: byId("promptLabel"), promptHint: byId("promptHint"),
+  sizePreset: byId("sizePreset"), customSizeRow: byId("customSizeRow"),
+  customWidth: byId("customWidth"), customHeight: byId("customHeight"),
+  count: byId("count"), countValue: byId("countValue"), transparent: byId("transparent"),
+  steps: byId("steps"), stepsValue: byId("stepsValue"), cfgScale: byId("cfgScale"), cfgValue: byId("cfgValue"),
+  seed: byId("seed"), randomSeedButton: byId("randomSeedButton"), negativePrompt: byId("negativePrompt"),
+  generateButton: byId("generateButton"), estimate: byId("estimate"), errorBox: byId("errorBox"), infoBox: byId("infoBox"),
+  progressCard: byId("progressCard"), progressPhase: byId("progressPhase"), progressDetails: byId("progressDetails"),
+  progressBar: byId("progressBar"), progressFill: byId("progressFill"), progressTiming: byId("progressTiming"),
+  cancelButton: byId("cancelButton"), resultArea: byId("resultArea"),
+  galleryGrid: byId("galleryGrid"), refreshGalleryButton: byId("refreshGalleryButton"),
+  galleryCount: byId("galleryCount"), galleryNormalActions: byId("galleryNormalActions"),
+  gallerySelectActions: byId("gallerySelectActions"), selectModeButton: byId("selectModeButton"),
+  deleteAllButton: byId("deleteAllButton"), selectionCount: byId("selectionCount"),
+  selectAllButton: byId("selectAllButton"), deleteSelectedButton: byId("deleteSelectedButton"),
+  cancelSelectButton: byId("cancelSelectButton"),
+  footerInfo: byId("footerInfo"), openFolderButton: byId("openFolderButton"), shutdownButton: byId("shutdownButton"),
+  modal: byId("modal"), modalImage: byId("modalImage"), modalTitle: byId("modalTitle"), modalMeta: byId("modalMeta"),
+  modalDownload: byId("modalDownload"), modalEditButton: byId("modalEditButton"),
+  modalReuseButton: byId("modalReuseButton"), modalDeleteButton: byId("modalDeleteButton"),
+  modalCloseButton: byId("modalCloseButton"), offlineOverlay: byId("offlineOverlay"), offlineText: byId("offlineText"),
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+async function apiRequest(path, options = {}) {
+  const response = await fetch(path, {
+    method: options.method || "GET",
+    headers: options.body ? { "Content-Type": "application/json" } : undefined,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  let payload = {};
+  try { payload = await response.json(); } catch (parseError) { /* empty body */ }
+  if (!response.ok) {
+    throw new Error(payload.error || ("שגיאה " + response.status));
+  }
+  return payload;
+}
+
+function formatDuration(totalSeconds) {
+  totalSeconds = Math.max(0, Math.round(totalSeconds));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return seconds + " שניות";
+  return ltrIsolate(minutes + ":" + String(seconds).padStart(2, "0")) + " דקות";
+}
+
+function roundToMultipleOf32(value) {
+  return Math.max(256, Math.min(2048, Math.round(value / 32) * 32));
+}
+
+function showError(message) {
+  elements.errorBox.textContent = message;
+  elements.errorBox.style.display = message ? "block" : "none";
+  if (message) showInfo("");
+}
+
+function showInfo(message) {
+  elements.infoBox.textContent = message;
+  elements.infoBox.style.display = message ? "block" : "none";
+}
+
+function escapeHtml(text) {
+  const container = document.createElement("div");
+  container.textContent = text == null ? "" : String(text);
+  return container.innerHTML;
+}
+
+function loadImage(sourceUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("לא ניתן לקרוא את התמונה"));
+    image.src = sourceUrl;
+  });
+}
+
+// Load any image source, downscale if very large, and return a PNG data URL (keeps transparency)
+async function imageSourceToPngDataUrl(sourceUrl) {
+  const image = await loadImage(sourceUrl);
+  const scale = Math.min(1, MAX_UPLOAD_SIDE / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(image.naturalWidth * scale);
+  canvas.height = Math.round(image.naturalHeight * scale);
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  // Detect transparent pixels (alpha < 250) so the edit can keep or drop the transparency on purpose
+  const pixelData = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  let hasTransparency = false;
+  for (let alphaIndex = 3; alphaIndex < pixelData.length; alphaIndex += 4) {
+    if (pixelData[alphaIndex] < 250) { hasTransparency = true; break; }
+  }
+  return { dataUrl: canvas.toDataURL("image/png"), width: canvas.width, height: canvas.height, hasTransparency };
+}
+
+// Transparent pixels still carry hidden colors that the model would see; paint them white instead
+async function flattenOnWhite(dataUrl) {
+  const image = await loadImage(dataUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+// ---------------------------------------------------------------------------
+// Size selection and time estimate
+// ---------------------------------------------------------------------------
+function currentPresets() {
+  return currentMode === "edit" ? [EDIT_AUTO_PRESET, EDIT_FAST_AUTO_PRESET, ...TXT2IMG_SIZE_PRESETS] : TXT2IMG_SIZE_PRESETS;
+}
+
+function fillSizePresets() {
+  elements.sizePreset.innerHTML = "";
+  currentPresets().forEach((preset, presetIndex) => {
+    const option = document.createElement("option");
+    option.value = String(presetIndex);
+    option.textContent = preset.label;
+    elements.sizePreset.appendChild(option);
+  });
+  elements.sizePreset.value = "0";
+  onSizePresetChanged();
+}
+
+function onSizePresetChanged() {
+  const preset = currentPresets()[Number(elements.sizePreset.value)];
+  elements.customSizeRow.style.display = preset && preset.custom ? "grid" : "none";
+  updateEstimate();
+}
+
+// Resolve the output size: presets, custom values, or derived from the first reference image
+function resolveOutputSize() {
+  const preset = currentPresets()[Number(elements.sizePreset.value)] || TXT2IMG_SIZE_PRESETS[0];
+  if (preset.custom) {
+    return { width: roundToMultipleOf32(Number(elements.customWidth.value) || 1024),
+             height: roundToMultipleOf32(Number(elements.customHeight.value) || 1024) };
+  }
+  if (preset.auto) {
+    const firstReference = referenceImages[0];
+    if (!firstReference) return { width: 1024, height: 1024 };
+    // Keep the first image's aspect ratio at roughly the target pixel area
+    const targetArea = preset.targetArea || AUTO_SIZE_TARGET_AREA;
+    const aspectRatio = firstReference.width / firstReference.height;
+    const width = roundToMultipleOf32(Math.sqrt(targetArea * aspectRatio));
+    const height = roundToMultipleOf32(width / aspectRatio);
+    return { width, height };
+  }
+  return { width: preset.width, height: preset.height };
+}
+
+function updateEstimate() {
+  const outputSize = resolveOutputSize();
+  const megapixels = (outputSize.width * outputSize.height) / (1024 * 1024);
+  const steps = Number(elements.steps.value);
+  const imageCount = Number(elements.count.value);
+  // Measured on this PC: ~6 s per step at 1 MP; editing also attends to the reference images
+  let secondsPerStep = 6.0 * megapixels;
+  if (currentMode === "edit") secondsPerStep *= 1 + 0.9 * Math.max(1, referenceImages.length);
+  const loadSeconds = currentMode === "edit" ? 60 : 45;
+  const totalSeconds = loadSeconds + imageCount * (steps * secondsPerStep + 8);
+  elements.estimate.textContent = "גודל התוצאה: " + sizeText(outputSize.width, outputSize.height)
+    + " | הערכת זמן: כ-" + formatDuration(totalSeconds);
+}
+
+// ---------------------------------------------------------------------------
+// Mode switching and reference images
+// ---------------------------------------------------------------------------
+function setMode(newMode) {
+  if (newMode === "edit" && !editAvailable) return;
+  currentMode = newMode;
+  elements.tabTxt2img.classList.toggle("active", newMode === "txt2img");
+  elements.tabEdit.classList.toggle("active", newMode === "edit");
+  elements.editSection.style.display = newMode === "edit" ? "block" : "none";
+  elements.promptLabel.textContent = newMode === "edit" ? "מה לשנות בתמונה?" : "מה ליצור?";
+  elements.prompt.placeholder = newMode === "edit"
+    ? "Change the text on the sign to 'Closed'. Keep everything else the same."
+    : "A cozy bookstore at golden hour, a wooden sign above the door reads 'Open'";
+  elements.generateButton.textContent = newMode === "edit" ? "ערוך תמונה" : "צור תמונה";
+  fillSizePresets();
+}
+
+async function addReferenceFromSource(sourceUrl) {
+  if (referenceImages.length >= MAX_REFERENCE_IMAGES) {
+    showError("אפשר לעבוד עם עד " + MAX_REFERENCE_IMAGES + " תמונות בבת אחת.");
+    return;
+  }
+  try {
+    const reference = await imageSourceToPngDataUrl(sourceUrl);
+    referenceImages.push(reference);
+    showError("");
+    if (reference.hasTransparency && !elements.transparent.checked) {
+      elements.transparent.checked = true;
+      showInfo("לתמונה יש רקע שקוף, אז סימנתי 'רקע שקוף' כדי שהעריכה תשמור עליו. אם תבטלו את הסימון, הרקע יהפוך ללבן.");
+    }
+    renderReferenceList();
+  } catch (loadError) {
+    showError(loadError.message);
+  }
+}
+
+function addReferenceFiles(fileList) {
+  Array.from(fileList).filter((file) => file.type.startsWith("image/")).forEach((file) => {
+    const fileReader = new FileReader();
+    fileReader.onload = () => addReferenceFromSource(fileReader.result);
+    fileReader.readAsDataURL(file);
+  });
+}
+
+function renderReferenceList() {
+  elements.referenceList.innerHTML = "";
+  referenceImages.forEach((reference, referenceIndex) => {
+    const item = document.createElement("div");
+    item.className = "reference-item checker";
+    item.innerHTML = '<img alt=""><span class="badge">' + (referenceIndex + 1) + '</span><button class="remove" title="הסר">הסר</button>';
+    item.querySelector("img").src = reference.dataUrl;
+    item.querySelector(".remove").addEventListener("click", () => {
+      referenceImages.splice(referenceIndex, 1);
+      renderReferenceList();
+    });
+    elements.referenceList.appendChild(item);
+  });
+  updateEstimate();
+}
+
+// ---------------------------------------------------------------------------
+// Generation and progress
+// ---------------------------------------------------------------------------
+async function startGeneration() {
+  showError("");
+  const promptText = elements.prompt.value.trim();
+  if (!promptText) { showError("כתבו תיאור קודם."); elements.prompt.focus(); return; }
+  if (currentMode === "edit" && referenceImages.length === 0) { showError("הוסיפו תמונה לעריכה."); return; }
+
+  const outputSize = resolveOutputSize();
+  elements.generateButton.disabled = true;
+  showInfo("");
+  // Without the transparency option, transparent areas of the inputs become white
+  let editImages = [];
+  try {
+    if (currentMode === "edit") {
+      editImages = await Promise.all(referenceImages.map((reference) =>
+        reference.hasTransparency && !elements.transparent.checked ? flattenOnWhite(reference.dataUrl) : reference.dataUrl));
+    }
+  } catch (flattenError) {
+    showError(flattenError.message);
+    elements.generateButton.disabled = false;
+    return;
+  }
+  const requestBody = {
+    mode: currentMode,
+    prompt: promptText,
+    negative_prompt: elements.negativePrompt.value.trim(),
+    width: outputSize.width,
+    height: outputSize.height,
+    steps: Number(elements.steps.value),
+    cfg_scale: Number(elements.cfgScale.value),
+    seed: Number(elements.seed.value || -1),
+    count: Number(elements.count.value),
+    transparent: elements.transparent.checked,
+    images: editImages,
+  };
+  try {
+    await apiRequest("/api/generate", { method: "POST", body: requestBody });
+    startPolling();
+  } catch (requestError) {
+    showError(requestError.message);
+    elements.generateButton.disabled = false;
+  }
+}
+
+function startPolling() {
+  clearInterval(pollTimer);
+  pollStatus();
+  pollTimer = setInterval(pollStatus, 1000);
+}
+
+async function pollStatus() {
+  let status;
+  try {
+    status = await apiRequest("/api/status");
+    setServerOnline(true);
+  } catch (connectionError) {
+    setServerOnline(false);
+    return;
+  }
+  renderStatus(status);
+  if (status.state !== "running") {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+let lastRenderedJobId = "";
+
+function renderStatus(status) {
+  const running = status.state === "running";
+  elements.statusPill.className = "status-pill " + (running ? "running" : "idle");
+  elements.statusText.textContent = running ? "המודל פעיל - עובד על התמונה" : "המודל כבוי - לא צורך זיכרון";
+  elements.generateButton.disabled = running;
+  elements.progressCard.classList.toggle("visible", running);
+
+  if (running) {
+    elements.progressPhase.textContent = PHASE_LABELS[status.phase] || "עובד...";
+    const isSampling = status.phase === "sampling" && status.total_steps > 0 && status.step > 0;
+    elements.progressBar.classList.toggle("indeterminate", !isSampling && status.phase !== "decoding");
+    let detailsText = "";
+    let remainingText = "";
+    if (isSampling) {
+      const completedSteps = (status.image_index - 1) * status.total_steps + status.step;
+      const allSteps = status.image_count * status.total_steps;
+      elements.progressFill.style.width = Math.min(100, (completedSteps / allSteps) * 100).toFixed(1) + "%";
+      detailsText = (status.image_count > 1 ? "תמונה " + status.image_index + " מתוך " + status.image_count + " - " : "")
+        + "צעד " + status.step + " מתוך " + status.total_steps
+        + (status.seconds_per_step ? " - " + status.seconds_per_step + " שניות לצעד" : "");
+      if (status.seconds_per_step && status.step > 1) {
+        remainingText = " - נותרו בערך " + formatDuration((allSteps - completedSteps) * status.seconds_per_step + 8);
+      }
+    } else if (status.phase === "decoding") {
+      elements.progressFill.style.width = "100%";
+    } else {
+      elements.progressFill.style.width = "";
+    }
+    if (status.attempt > 1) detailsText = "ניסיון " + status.attempt + " מתוך 3" + (detailsText ? " - " + detailsText : "");
+    if (status.gpu_constrained) {
+      detailsText = "כרטיס המסך עמוס בתוכנות אחרות - עובד במצב חסכוני, איטי יותר" + (detailsText ? " | " + detailsText : "");
+    }
+    elements.progressDetails.textContent = detailsText;
+    elements.progressTiming.textContent = "זמן שעבר: " + formatDuration(status.elapsed_seconds) + remainingText;
+    lastRenderedJobId = status.job_id;
+    return;
+  }
+
+  // Finished states: show results once per job
+  if (status.job_id && status.job_id !== lastRenderedJobId + ":done") {
+    if (status.state === "done") {
+      renderResults(status.results);
+    } else if (status.state === "error") {
+      showError("היצירה נכשלה: " + status.error + "\nפרטים מלאים בקובץ logs\\last_job.log");
+    } else if (status.state === "cancelled") {
+      showError("היצירה בוטלה.");
+    }
+    if (status.state !== "idle") { loadGallery(); refreshGpuStatus(); }
+    lastRenderedJobId = status.job_id + ":done";
+  }
+}
+
+function renderResults(resultNames) {
+  elements.resultArea.innerHTML = "";
+  resultNames.forEach((resultName) => {
+    const imageUrl = "/outputs/" + encodeURIComponent(resultName);
+    const item = document.createElement("div");
+    item.className = "result-item";
+    item.dataset.name = resultName;
+    item.innerHTML = '<img class="checker" alt=""><div class="item-actions">'
+      + '<a class="ghost" download style="text-decoration:none; border:1px solid var(--border); border-radius:8px; padding:6px 10px; color:var(--muted); font-size:13px">הורדה</a>'
+      + '<button class="ghost" data-action="edit">ערוך את התמונה הזו</button>'
+      + '<button class="ghost" data-action="details">פרטים</button>'
+      + '<button class="ghost danger-text" data-action="delete">מחק</button></div>';
+    item.querySelector("img").src = imageUrl;
+    item.querySelector("a").href = imageUrl;
+    item.querySelector("img").addEventListener("click", () => openModalByName(resultName));
+    item.querySelector('[data-action="details"]').addEventListener("click", () => openModalByName(resultName));
+    item.querySelector('[data-action="edit"]').addEventListener("click", () => sendImageToEdit(imageUrl));
+    item.querySelector('[data-action="delete"]').addEventListener("click", () => deleteImages([resultName]));
+    elements.resultArea.appendChild(item);
+  });
+}
+
+async function cancelGeneration() {
+  try { await apiRequest("/api/cancel", { method: "POST", body: {} }); } catch (cancelError) { showError(cancelError.message); }
+}
+
+// ---------------------------------------------------------------------------
+// Gallery and lightbox
+// ---------------------------------------------------------------------------
+let galleryItems = [];
+let galleryTotal = 0;           // all images on disk (the list itself is capped by the server)
+let selectionMode = false;
+const selectedNames = new Set();
+const EMPTY_RESULT_HTML = '<div class="result-empty">התמונות שתיצרו יופיעו כאן.<br>המודל נטען רק בזמן יצירה ונכבה מיד בסיום.</div>';
+
+async function loadGallery() {
+  try {
+    const galleryResponse = await apiRequest("/api/gallery");
+    galleryItems = galleryResponse.items;
+    galleryTotal = galleryResponse.total != null ? galleryResponse.total : galleryItems.length;
+  } catch (galleryError) {
+    return;
+  }
+  // Forget selections of images that no longer exist
+  const existingNames = new Set(galleryItems.map((item) => item.name));
+  Array.from(selectedNames).forEach((name) => { if (!existingNames.has(name)) selectedNames.delete(name); });
+  renderGallery();
+}
+
+function renderGallery() {
+  elements.galleryGrid.innerHTML = "";
+  elements.galleryGrid.classList.toggle("selecting", selectionMode);
+  elements.galleryCount.textContent = galleryTotal ? "(" + galleryTotal + ")" : "";
+  elements.deleteAllButton.disabled = galleryTotal === 0;
+  elements.selectModeButton.disabled = galleryTotal === 0;
+  if (galleryItems.length === 0) {
+    elements.galleryGrid.innerHTML = '<div class="gallery-empty">אין תמונות בגלריה.</div>';
+    if (selectionMode) setSelectionMode(false);
+    return;
+  }
+  galleryItems.forEach((galleryItem) => {
+    const thumb = document.createElement("div");
+    thumb.className = "thumb checker" + (selectedNames.has(galleryItem.name) ? " selected" : "");
+    thumb.title = galleryItem.meta ? galleryItem.meta.prompt : galleryItem.name;
+    thumb.innerHTML = '<img loading="lazy" alt=""><span class="select-mark"></span>'
+      + '<button class="thumb-delete" title="מחיקה לצמיתות מהמחשב">מחק</button>';
+    thumb.querySelector("img").src = galleryItem.url + "?v=" + Math.round(galleryItem.modified);
+    thumb.querySelector(".thumb-delete").addEventListener("click", (clickEvent) => {
+      clickEvent.stopPropagation();
+      deleteImages([galleryItem.name]);
+    });
+    thumb.addEventListener("click", () => {
+      if (selectionMode) toggleSelection(galleryItem.name, thumb);
+      else openModal(galleryItem);
+    });
+    elements.galleryGrid.appendChild(thumb);
+  });
+  updateSelectionUi();
+}
+
+// ---------------------------------------------------------------------------
+// Selecting and deleting images (deletion is permanent: files are removed from disk)
+// ---------------------------------------------------------------------------
+function setSelectionMode(isOn) {
+  selectionMode = isOn;
+  selectedNames.clear();
+  elements.galleryNormalActions.style.display = isOn ? "none" : "flex";
+  elements.gallerySelectActions.style.display = isOn ? "flex" : "none";
+  renderGallery();
+}
+
+function toggleSelection(imageName, thumb) {
+  if (selectedNames.has(imageName)) selectedNames.delete(imageName);
+  else selectedNames.add(imageName);
+  thumb.classList.toggle("selected", selectedNames.has(imageName));
+  updateSelectionUi();
+}
+
+function updateSelectionUi() {
+  const selectedCount = selectedNames.size;
+  elements.selectionCount.textContent = selectedCount === 0 ? "לחצו על תמונות כדי לבחור" : "נבחרו " + selectedCount;
+  elements.deleteSelectedButton.disabled = selectedCount === 0;
+  elements.deleteSelectedButton.textContent = selectedCount > 0 ? "מחק " + selectedCount + " נבחרות" : "מחק נבחרות";
+  const allSelected = galleryItems.length > 0 && selectedCount === galleryItems.length;
+  elements.selectAllButton.textContent = allSelected ? "נקה בחירה" : "בחר הכל";
+}
+
+function toggleSelectAll() {
+  if (selectedNames.size === galleryItems.length) selectedNames.clear();
+  else galleryItems.forEach((item) => selectedNames.add(item.name));
+  renderGallery();
+}
+
+// names: list of file names; deleteEverything: also removes images beyond the displayed list
+async function deleteImages(names, deleteEverything = false) {
+  const imageCount = deleteEverything ? galleryTotal : names.length;
+  if (imageCount === 0) return;
+  const question = deleteEverything
+    ? "למחוק לצמיתות את כל " + imageCount + " התמונות בגלריה?"
+    : imageCount === 1 ? "למחוק לצמיתות את התמונה?" : "למחוק לצמיתות " + imageCount + " תמונות?";
+  if (!confirm(question + "\n\nהקבצים יימחקו מהמחשב ואי אפשר יהיה לשחזר אותם.")) return;
+
+  let deleteResponse;
+  try {
+    deleteResponse = await apiRequest("/api/delete", { method: "POST", body: deleteEverything ? { all: true } : { names } });
+  } catch (deleteError) {
+    showError("המחיקה נכשלה: " + deleteError.message);
+    return;
+  }
+  removeDeletedFromView(new Set(deleteResponse.deleted));
+  if (deleteResponse.skipped.length > 0) {
+    showError(deleteResponse.skipped.length + " תמונות לא נמחקו (תמונה שעדיין בתהליך יצירה, או שכבר לא קיימת).");
+  }
+  await loadGallery();
+}
+
+function removeDeletedFromView(deletedNames) {
+  if (deletedNames.size === 0) return;
+  galleryItems = galleryItems.filter((item) => !deletedNames.has(item.name));
+  galleryTotal = Math.max(0, galleryTotal - deletedNames.size);
+  deletedNames.forEach((name) => selectedNames.delete(name));
+  // Also clear them from the latest-results panel and the open lightbox
+  elements.resultArea.querySelectorAll(".result-item").forEach((resultItem) => {
+    if (deletedNames.has(resultItem.dataset.name)) resultItem.remove();
+  });
+  if (!elements.resultArea.querySelector(".result-item")) elements.resultArea.innerHTML = EMPTY_RESULT_HTML;
+  if (modalItem && deletedNames.has(modalItem.name)) closeModal();
+  renderGallery();
+}
+
+function openModalByName(imageName) {
+  const galleryItem = galleryItems.find((item) => item.name === imageName);
+  openModal(galleryItem || { name: imageName, url: "/outputs/" + encodeURIComponent(imageName), meta: null });
+}
+
+function openModal(galleryItem) {
+  modalItem = galleryItem;
+  elements.modalImage.src = galleryItem.url;
+  elements.modalImage.className = "checker";
+  elements.modalDownload.href = galleryItem.url;
+  elements.modalTitle.textContent = galleryItem.name;
+  const meta = galleryItem.meta;
+  if (meta) {
+    const modeLabel = meta.mode === "edit" ? "עריכה (" + meta.reference_count + " תמונות מקור)" : "יצירה מטקסט";
+    elements.modalMeta.innerHTML =
+      '<table class="meta-table">'
+      + "<tr><td>סוג</td><td>" + escapeHtml(modeLabel) + "</td></tr>"
+      + "<tr><td>גודל</td><td class=\"ltr\">" + meta.width + " x " + meta.height + "</td></tr>"
+      + "<tr><td>צעדים</td><td>" + meta.steps + "</td></tr>"
+      + "<tr><td>CFG</td><td>" + meta.cfg_scale + "</td></tr>"
+      + "<tr><td>Seed</td><td class=\"ltr\">" + escapeHtml(meta.seed != null ? meta.seed : meta.seed_requested) + "</td></tr>"
+      + "<tr><td>שקיפות</td><td>" + (meta.transparent ? "כן" : "לא") + "</td></tr>"
+      + "<tr><td>זמן</td><td>" + formatDuration(meta.duration_seconds) + "</td></tr>"
+      + "<tr><td>נוצר</td><td class=\"ltr\">" + escapeHtml(meta.created_at) + "</td></tr>"
+      + "</table>"
+      + '<div class="field-label" style="margin-top:0">תיאור</div><div class="meta-prompt" dir="auto">' + escapeHtml(meta.prompt) + "</div>"
+      + (meta.negative_prompt ? '<div class="field-label">מה לא לכלול</div><div class="meta-prompt" dir="auto">' + escapeHtml(meta.negative_prompt) + "</div>" : "");
+  } else {
+    elements.modalMeta.innerHTML = '<p class="hint">אין פרטי הגדרות לתמונה הזו.</p>';
+  }
+  elements.modalReuseButton.style.display = meta ? "block" : "none";
+  elements.modal.classList.add("open");
+}
+
+function closeModal() {
+  elements.modal.classList.remove("open");
+  modalItem = null;
+}
+
+function reuseSettings(meta) {
+  setMode(meta.mode === "edit" && editAvailable ? "edit" : "txt2img");
+  elements.prompt.value = meta.prompt || "";
+  elements.negativePrompt.value = meta.negative_prompt || "";
+  elements.steps.value = meta.steps; elements.stepsValue.textContent = meta.steps;
+  elements.cfgScale.value = meta.cfg_scale; elements.cfgValue.textContent = meta.cfg_scale;
+  elements.seed.value = meta.seed != null ? meta.seed : meta.seed_requested;
+  elements.transparent.checked = !!meta.transparent;
+  elements.count.value = 1; elements.countValue.textContent = "1";
+  // Select the matching preset, or fall back to custom size
+  const presets = currentPresets();
+  const matchingIndex = presets.findIndex((preset) => preset.width === meta.width && preset.height === meta.height);
+  const customIndex = presets.findIndex((preset) => preset.custom);
+  elements.sizePreset.value = String(matchingIndex >= 0 ? matchingIndex : customIndex);
+  elements.customWidth.value = meta.width;
+  elements.customHeight.value = meta.height;
+  onSizePresetChanged();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function sendImageToEdit(imageUrl) {
+  if (!editAvailable) return;
+  if (currentMode !== "edit") setMode("edit");
+  closeModal();
+  await addReferenceFromSource(imageUrl);
+  elements.prompt.focus();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function deleteModalImage() {
+  if (!modalItem) return;
+  await deleteImages([modalItem.name]);
+}
+
+// ---------------------------------------------------------------------------
+// GPU memory indicator (other programs can fill the 8 GB card)
+// ---------------------------------------------------------------------------
+async function refreshGpuStatus() {
+  // While a job runs the engine itself fills the card, so the number would be misleading
+  if (pollTimer) return;
+  let gpu = null;
+  try { gpu = (await apiRequest("/api/gpu")).gpu; } catch (gpuError) { return; }
+  if (!gpu) {
+    elements.gpuText.textContent = "כרטיס מסך: לא זמין";
+    return;
+  }
+  const freeGigabytes = (gpu.free_mb / 1024).toFixed(1);
+  const totalGigabytes = Math.round(gpu.total_mb / 1024);
+  const isLow = gpu.free_mb < LOW_GPU_MEMORY_MB;
+  elements.gpuText.textContent = "כרטיס מסך: " + freeGigabytes + " מתוך " + totalGigabytes + " GB פנויים"
+    + (isLow ? " - תוכנה אחרת תופסת אותו" : "");
+  elements.gpuPill.classList.toggle("gpu-low", isLow);
+}
+
+// ---------------------------------------------------------------------------
+// Background service configured in local_settings.json (hidden if none):
+// switch it off while you need the whole machine, and back on afterwards
+// ---------------------------------------------------------------------------
+function renderBackgroundService(status) {
+  elements.servicePill.hidden = !status.available;
+  elements.serviceButton.hidden = !status.available;
+  if (!status.available) return;
+  serviceLabel = status.label;
+  const busy = status.state === "starting" || status.state === "stopping";
+  const isOff = status.state === "off";
+  const failed = status.error && !busy;
+  let pillClass = busy ? "service-busy" : (isOff ? "service-off" : "service-on");
+  if (failed) pillClass += " service-error";
+  elements.servicePill.className = "status-pill " + pillClass;
+  elements.serviceText.textContent = serviceLabel + ": "
+    + (failed ? "הפעולה האחרונה נכשלה" : (SERVICE_STATE_TEXTS[status.state] || status.state));
+  elements.servicePill.title = failed ? status.error : status.description;
+  elements.serviceButton.disabled = busy;
+  elements.serviceButton.textContent = busy ? "רגע..." : (isOff ? "הדלק " : "כבה ") + serviceLabel;
+  elements.serviceButton.dataset.action = isOff ? "start" : "stop";
+}
+
+async function refreshBackgroundServiceStatus() {
+  clearTimeout(serviceTimer);
+  let status = null;
+  try { status = await apiRequest("/api/background-service"); } catch (serviceError) { /* server down */ }
+  if (status) {
+    renderBackgroundService(status);
+    const busy = status.state === "starting" || status.state === "stopping";
+    // A switch just finished: the free GPU memory changed with it
+    if (serviceWasBusy && !busy) refreshGpuStatus();
+    serviceWasBusy = busy;
+    serviceTimer = setTimeout(refreshBackgroundServiceStatus, busy ? SERVICE_BUSY_REFRESH_MS : SERVICE_REFRESH_MS);
+  } else {
+    serviceTimer = setTimeout(refreshBackgroundServiceStatus, SERVICE_REFRESH_MS);
+  }
+}
+
+async function toggleBackgroundService() {
+  const action = elements.serviceButton.dataset.action;
+  if (action === "stop" && !confirm(`לכבות את "${serviceLabel}"? הוא לא יפעל עד שתדליקו אותו שוב.`)) return;
+  elements.serviceButton.disabled = true;
+  try {
+    renderBackgroundService(await apiRequest("/api/background-service", { method: "POST", body: { action } }));
+  } catch (toggleError) {
+    alert(toggleError.message);
+  }
+  refreshBackgroundServiceStatus();
+}
+
+// ---------------------------------------------------------------------------
+// Server connection
+// ---------------------------------------------------------------------------
+function setServerOnline(isOnline) {
+  if (serverOnline === isOnline) return;
+  serverOnline = isOnline;
+  elements.statusPill.className = "status-pill " + (isOnline ? "idle" : "offline");
+  if (!isOnline) {
+    elements.statusText.textContent = "אין חיבור לממשק";
+    elements.generateButton.disabled = true;
+  }
+}
+
+async function shutdownInterface() {
+  if (!confirm("לכבות את הממשק? אם יצירה פעילה - היא תבוטל.")) return;
+  try { await apiRequest("/api/shutdown", { method: "POST", body: {} }); } catch (shutdownError) { /* already down */ }
+  clearInterval(pollTimer);
+  elements.offlineOverlay.classList.add("visible");
+}
+
+// ---------------------------------------------------------------------------
+// Wiring
+// ---------------------------------------------------------------------------
+elements.tabTxt2img.addEventListener("click", () => setMode("txt2img"));
+elements.tabEdit.addEventListener("click", () => setMode("edit"));
+elements.sizePreset.addEventListener("change", onSizePresetChanged);
+[elements.customWidth, elements.customHeight].forEach((input) => input.addEventListener("input", updateEstimate));
+elements.count.addEventListener("input", () => { elements.countValue.textContent = elements.count.value; updateEstimate(); });
+elements.steps.addEventListener("input", () => { elements.stepsValue.textContent = elements.steps.value; updateEstimate(); });
+elements.cfgScale.addEventListener("input", () => { elements.cfgValue.textContent = elements.cfgScale.value; });
+elements.randomSeedButton.addEventListener("click", () => { elements.seed.value = -1; });
+elements.generateButton.addEventListener("click", startGeneration);
+elements.cancelButton.addEventListener("click", cancelGeneration);
+elements.refreshGalleryButton.addEventListener("click", loadGallery);
+elements.selectModeButton.addEventListener("click", () => setSelectionMode(true));
+elements.cancelSelectButton.addEventListener("click", () => setSelectionMode(false));
+elements.selectAllButton.addEventListener("click", toggleSelectAll);
+elements.deleteSelectedButton.addEventListener("click", () => deleteImages(Array.from(selectedNames)));
+elements.deleteAllButton.addEventListener("click", () => deleteImages([], true));
+elements.openFolderButton.addEventListener("click", () => apiRequest("/api/open-folder", { method: "POST", body: {} }).catch((folderError) => showError(folderError.message)));
+elements.shutdownButton.addEventListener("click", shutdownInterface);
+elements.serviceButton.addEventListener("click", toggleBackgroundService);
+elements.modalCloseButton.addEventListener("click", closeModal);
+elements.modal.addEventListener("click", (clickEvent) => { if (clickEvent.target === elements.modal) closeModal(); });
+elements.modalEditButton.addEventListener("click", () => modalItem && sendImageToEdit(modalItem.url));
+elements.modalReuseButton.addEventListener("click", () => { if (modalItem && modalItem.meta) { reuseSettings(modalItem.meta); closeModal(); } });
+elements.modalDeleteButton.addEventListener("click", deleteModalImage);
+
+elements.dropzone.addEventListener("click", () => elements.fileInput.click());
+elements.fileInput.addEventListener("change", () => { addReferenceFiles(elements.fileInput.files); elements.fileInput.value = ""; });
+elements.dropzone.addEventListener("dragover", (dragEvent) => { dragEvent.preventDefault(); elements.dropzone.classList.add("drag-over"); });
+elements.dropzone.addEventListener("dragleave", () => elements.dropzone.classList.remove("drag-over"));
+elements.dropzone.addEventListener("drop", (dropEvent) => {
+  dropEvent.preventDefault();
+  elements.dropzone.classList.remove("drag-over");
+  addReferenceFiles(dropEvent.dataTransfer.files);
+});
+document.addEventListener("paste", (pasteEvent) => {
+  const pastedFiles = Array.from(pasteEvent.clipboardData.files || []);
+  if (pastedFiles.length === 0) return;
+  if (currentMode !== "edit" && editAvailable) setMode("edit");
+  addReferenceFiles(pastedFiles);
+});
+document.addEventListener("keydown", (keyEvent) => {
+  const modalOpen = elements.modal.classList.contains("open");
+  if (keyEvent.key === "Escape") {
+    if (modalOpen) closeModal();
+    else if (selectionMode) setSelectionMode(false);
+  }
+  // Delete key removes the image shown in the lightbox (after confirmation)
+  if (keyEvent.key === "Delete" && modalOpen) deleteModalImage();
+  if (keyEvent.key === "Enter" && keyEvent.ctrlKey && !elements.generateButton.disabled) startGeneration();
+});
+
+async function initialize() {
+  fillSizePresets();
+  // Allow opening straight into edit mode: http://127.0.0.1:7860/#edit
+  const openInEditMode = location.hash === "#edit";
+  try {
+    const config = await apiRequest("/api/config");
+    editAvailable = config.edit_available;
+    elements.modelName.textContent = config.model;
+    elements.footerInfo.textContent = "התמונות נשמרות ב: " + ltrIsolate(config.output_dir);
+    if (!editAvailable) {
+      elements.tabEdit.disabled = true;
+      elements.tabEdit.title = "רכיב העריכה לא מותקן";
+    } else if (openInEditMode) {
+      setMode("edit");
+    }
+  } catch (configError) {
+    setServerOnline(false);
+  }
+  await loadGallery();
+  refreshGpuStatus();
+  setInterval(refreshGpuStatus, GPU_REFRESH_MS);
+  refreshBackgroundServiceStatus();
+  // Resume progress display if a job is already running (e.g. page was reloaded)
+  const initialStatus = await apiRequest("/api/status").catch(() => null);
+  if (initialStatus) {
+    lastRenderedJobId = initialStatus.job_id + ":done";
+    if (initialStatus.state === "running") startPolling();
+  }
+}
+
+initialize();
+</script>
+</body>
+</html>

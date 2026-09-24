@@ -1,0 +1,11 @@
+{
+  "background_service": {
+    "label": "שירות רקע",
+    "description": "שירות רקע שצורך מעבד וכרטיס מסך. כבו אותו כשצריך את כל כוח העיבוד של המחשב.",
+    "script": "C:\\path\\to\\service-control.ps1",
+    "working_dir": "C:\\path\\to",
+    "health_urls": {
+      "main": "http://127.0.0.1:9000/health"
+    }
+  }
+}

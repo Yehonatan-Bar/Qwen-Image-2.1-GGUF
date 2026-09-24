@@ -1,0 +1,14 @@
+{
+  "global_settings": { "log_level": "INFO", "include_timestamp": true },
+  "log_categories": {
+    "SERVER_LIFECYCLE": { "enabled": true, "description": "Server start, stop, port binding, browser launch" },
+    "API_REQUEST": { "enabled": false, "description": "Every HTTP request (verbose, includes status polling)" },
+    "JOB_LIFECYCLE": { "enabled": true, "description": "Job accepted, engine started, finished, cancelled" },
+    "JOB_PROGRESS": { "enabled": false, "description": "Per-step sampling progress (verbose)" },
+    "JOB_ERROR": { "enabled": true, "description": "Engine failures and invalid job requests" },
+    "ENGINE_OUTPUT": { "enabled": false, "description": "Raw sd-cli output lines (very verbose; full log is also in logs/last_job.log)" },
+    "FILE_OPS": { "enabled": true, "description": "Gallery deletes, folder open, temp cleanup" },
+    "BACKGROUND_SERVICE": { "enabled": true, "description": "Switching the configured background service off and on" },
+    "API_SECURITY": { "enabled": true, "description": "Requests refused because they did not come from this UI (other website, wrong Host, non-JSON POST)" }
+  }
+}

@@ -1,0 +1,67 @@
+# ---------------------------------------------------------------------------
+# Large downloads - fetched separately (sources listed in TECHNICAL.md)
+# ---------------------------------------------------------------------------
+# Model weights (~11 GB)
+models/
+*.gguf
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+
+# stable-diffusion.cpp engine + CUDA runtime DLLs (~1.2 GB, some files > 100 MB)
+sd/
+*.exe
+*.dll
+
+# ---------------------------------------------------------------------------
+# Personal data produced at runtime
+# ---------------------------------------------------------------------------
+# Generated images + settings sidecars (PNG metadata includes the prompts)
+outputs/
+# Engine logs (full command lines and prompts of the last job)
+logs/
+*.log
+
+# ---------------------------------------------------------------------------
+# Secrets, credentials and machine-specific settings
+# ---------------------------------------------------------------------------
+# Local paths (user folder, other private projects); the committed template is local_settings.example.json
+local_settings.json
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+secrets/
+secrets.*
+credentials*.json
+*_token
+*.token
+.netrc
+.huggingface/
+.cache/huggingface/
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# ---------------------------------------------------------------------------
+# Editors, OS, local tool settings
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store
+.claude/settings.local.json
